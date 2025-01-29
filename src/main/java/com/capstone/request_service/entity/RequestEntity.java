@@ -19,10 +19,10 @@ public class RequestEntity {
     @Column(name = "request_id")
     private int requestId;
 
-    @Column(name = "username", nullable = false)
-    private String username;
+    @Column(name = "email")
+    private String email;
 
-    @Column(name = "community_id", nullable = false)
+    @Column(name = "community_id")
     private int communityId;
 
     @Column(name = "request_reason")
@@ -31,10 +31,10 @@ public class RequestEntity {
     @Column(name = "amount")
     private Double amount;
 
-    @Column(name = "request_date")
-    private LocalDateTime requestDate;
+    @Column(name = "request_date_time")
+    private LocalDateTime requestDateTime;
 
     @Column(name = "status")
     private String status;
 
-   }
+}

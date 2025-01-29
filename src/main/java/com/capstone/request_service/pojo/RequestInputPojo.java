@@ -1,7 +1,5 @@
 package com.capstone.request_service.pojo;
 
-import java.time.LocalDateTime;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,12 +8,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Data
 
-public class RequestPojo {
-    private int requestId;
-    private UserOutputDataPojo user;
-    private CommunityPojo community;
+public class RequestInputPojo {
+    private String email;
+    private int communityId;
     private String requestReason;
     private Double amount;
-    private LocalDateTime requestDateTime;
-    private String status;
 }
