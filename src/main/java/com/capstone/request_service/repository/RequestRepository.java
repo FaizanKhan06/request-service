@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface RequestRepository extends JpaRepository<RequestEntity, Integer> {
     List<RequestEntity> findByEmail(String email);
 
-    List<RequestEntity> findByCommunityId(int communityId);
+    List<RequestEntity> findByCommunityIdAndStatus(int communityId, String status);
 
     Optional<RequestEntity> findByCommunityIdAndEmail(int communityId, String email);
 

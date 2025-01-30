@@ -3,11 +3,14 @@ package com.capstone.request_service.service;
 import com.capstone.request_service.entity.RequestEntity;
 import com.capstone.request_service.exception.ResourceNotFoundException;
 import com.capstone.request_service.pojo.CommunityPojo;
+import com.capstone.request_service.pojo.DateTimePojo;
 import com.capstone.request_service.pojo.RequestFilterByCommunityIdAndEmailInputPojo;
 import com.capstone.request_service.pojo.RequestFilterByCommunityIdAndStartDateTimeRangeInputPojo;
 import com.capstone.request_service.pojo.RequestFilterByCommunityIdInputPojo;
 import com.capstone.request_service.pojo.RequestInputPojo;
 import com.capstone.request_service.pojo.RequestPojo;
+import com.capstone.request_service.pojo.TransactionInputPojo;
+import com.capstone.request_service.pojo.TransactionOutputPojo;
 import com.capstone.request_service.pojo.UserOutputDataPojo;
 import com.capstone.request_service.repository.RequestRepository;
 import org.springframework.beans.BeanUtils;
@@ -69,7 +72,7 @@ public class RequestService {
 
     // Get Requests by Community ID
     public List<RequestPojo> getRequestsByCommunityId(int communityId) {
-        List<RequestEntity> requestEntities = requestRepository.findByCommunityId(communityId);
+        List<RequestEntity> requestEntities = requestRepository.findByCommunityIdAndStatus(communityId, "pending");
         List<RequestPojo> requestPojos = new ArrayList<>();
         for (RequestEntity requestEntity : requestEntities) {
             requestPojos.add(convertEntityToPojo(requestEntity));
@@ -114,10 +117,16 @@ public class RequestService {
     }
 
     // Add Request
+    @SuppressWarnings("null")
     public RequestPojo addRequest(RequestInputPojo requestPojo) {
         RequestEntity requestEntity = new RequestEntity();
         BeanUtils.copyProperties(requestPojo, requestEntity);
-        requestEntity.setRequestDateTime(LocalDateTime.now());
+
+        RestClient restClient = RestClient.create();
+        DateTimePojo dateTimePojo = restClient.put().uri("http://localhost:5010/api/time")
+                .body(new DateTimePojo(0, LocalDateTime.now())).retrieve().body(DateTimePojo.class);
+        requestEntity.setRequestDateTime(dateTimePojo.getDateTime());
+
         requestEntity.setStatus("pending");
         RequestEntity savedEntity = requestRepository.saveAndFlush(requestEntity);
         return convertEntityToPojo(savedEntity);
@@ -135,8 +144,24 @@ public class RequestService {
     public RequestPojo updateRequestStatusToApproved(int requestId) {
         RequestEntity requestEntity = requestRepository.findById(requestId).orElse(null);
         requestEntity.setStatus("approved");
-        RequestEntity updatedEntity = requestRepository.save(requestEntity);
-        return convertEntityToPojo(updatedEntity);
+        TransactionInputPojo newTransaction = new TransactionInputPojo(requestEntity.getEmail(),
+                requestEntity.getCommunityId(), "Debit", requestEntity.getAmount(), 0);
+        // localhost:5006/api/transactions
+        RestClient restClient = RestClient.create();
+        CommunityPojo responseCommunity = restClient.get()
+                .uri("http://localhost:5002/api/communities/" + requestEntity.getCommunityId())
+                .retrieve().body(CommunityPojo.class);
+        if (responseCommunity != null && responseCommunity.getCurrentAmount() >= requestEntity.getAmount()) {
+            restClient.post()
+                    .uri("http://localhost:5006/api/transactions")
+                    .body(newTransaction)
+                    .retrieve().body(TransactionOutputPojo.class);
+            requestEntity = requestRepository.save(requestEntity);
+            return convertEntityToPojo(requestEntity);
+        } else {
+            return null;
+        }
+
     }
 
 }
