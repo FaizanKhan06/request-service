@@ -2,6 +2,8 @@ package com.capstone.request_service.service;
 
 import com.capstone.request_service.entity.RequestEntity;
 import com.capstone.request_service.exception.ResourceNotFoundException;
+import com.capstone.request_service.pojo.CommunityMembershipPojo;
+import com.capstone.request_service.pojo.CommunityMembershipUpdateAmountPojo;
 import com.capstone.request_service.pojo.CommunityPojo;
 import com.capstone.request_service.pojo.DateTimePojo;
 import com.capstone.request_service.pojo.RequestFilterByCommunityIdAndEmailInputPojo;
@@ -128,8 +130,12 @@ public class RequestService {
         requestEntity.setRequestDateTime(dateTimePojo.getDateTime());
 
         requestEntity.setStatus("pending");
-        RequestEntity savedEntity = requestRepository.saveAndFlush(requestEntity);
-        return convertEntityToPojo(savedEntity);
+         
+        if(getByStatusAndCommunityIdAndEmail(new RequestFilterByCommunityIdAndEmailInputPojo(requestPojo.getEmail(), requestPojo.getCommunityId(), "pending")).size() == 0){
+            RequestEntity savedEntity = requestRepository.saveAndFlush(requestEntity);
+            return convertEntityToPojo(savedEntity);
+        }
+        return null;
     }
 
     // Update Request Status To Rejected
@@ -152,6 +158,12 @@ public class RequestService {
                 .uri("http://localhost:5002/api/communities/" + requestEntity.getCommunityId())
                 .retrieve().body(CommunityPojo.class);
         if (responseCommunity != null && responseCommunity.getCurrentAmount() >= requestEntity.getAmount()) {
+            CommunityMembershipUpdateAmountPojo communityMembershipUpdateAmountPojo = new CommunityMembershipUpdateAmountPojo(requestEntity.getCommunityId(), requestEntity.getEmail(), 0);
+            restClient.put()
+                .uri("http://localhost:5005/api/CommunityMembership/setLoanTaken")
+                .body(communityMembershipUpdateAmountPojo)
+                .retrieve().body(CommunityMembershipPojo.class);
+                
             restClient.post()
                     .uri("http://localhost:5006/api/transactions")
                     .body(newTransaction)
